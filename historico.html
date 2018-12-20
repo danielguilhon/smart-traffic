@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html>
+<head> 
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+	<title>Tráfego Inteligente</title>
+	<link rel="stylesheet" href="//code.jquery.com/ui/1.12.1/themes/smoothness/jquery-ui.css">
+	<link rel="stylesheet" href="http://ghusse.github.io/jQRangeSlider/stable/css/iThing.css">
+	<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css">
+</head>
+<body>
+<nav class="navbar navbar-expand-lg navbar-light bg-light">
+  <a class="navbar-brand" href="#">Cidades Inteligentes - Trânsito Inteligente</a>
+  <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNavAltMarkup" aria-controls="navbarNavAltMarkup" aria-expanded="false" aria-label="Toggle navigation">
+    <span class="navbar-toggler-icon"></span>
+  </button>
+  <div class="collapse navbar-collapse" id="navbarNavAltMarkup">
+    <div class="navbar-nav">
+      <a class="nav-item nav-link" href="smart-traffic.html">Home<span class="sr-only">(current)</span></a>
+      <a class="nav-item nav-link active" href="#">Histórico</a>
+      <a class="nav-item nav-link" href="http://www.lsdi.ufma.br/">LSDi</a>
+    </div>
+  </div>
+</nav>
+	<div class="container">
+		<div class="row">
+			<div class="col-8">
+				<div class="card">
+                	<div class="card-body">
+						<!--grafico historico-->
+						<canvas id="grafico"></canvas>
+					</div>
+				</div>
+				<div id="dateslider"></div>
+			</div>
+
+			<div class="col-4">
+				<div class="input-group mb-3">
+  					<div class="input-group-prepend">
+						<label class="input-group-text" for="streets">Ruas:</label>
+						<select class="custom-select" id="streets"></select>
+					</div>
+				</div>
+				<div class="input-group mb-3">
+  					<div class="input-group-prepend">
+						<label class="input-group-text" for="segmentos">Segmentos:</label>
+						<select class="custom-select" id="segmentos"></select>
+					</div>
+				</div>
+				<div class="input-group mb-3">
+  					<div class="input-group-prepend">
+    					<label class="input-group-text" for="datainicial">Data Inicial:</label>
+						<input class="form-control" type="text" id="datainicial">
+					</div>
+ 				</div>
+ 				<div class="input-group mb-3">
+  					<div class="input-group-prepend">
+    					<label class="input-group-text" for="datafinal">Data Final:</label>
+						<input class="form-control" type="text" id="datafinal">
+ 					</div>
+ 				</div>
+				<button type="button" class="btn btn-primary" id="historico">Histórico</button>
+
+			</div>
+		</div>
+	</div>
+	<!--  para controle de fluxo -->
+	<div id="flow" class="invisible"></div>
+
+	<script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
+	<script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js"></script>
+	<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/js/bootstrap.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.7.3/Chart.bundle.min.js"></script>
+	<script src="sql.js"></script>
+	<script src="app.js"></script>
+	<script src="moment-with-locales.js"></script>
+	<script src="jQAllRangeSliders-withRuler-min.js"></script>
+	<script>
+		preparaAmbienteHistorico();
+		
+		$(document).ready(function() {
+			criaDateRangeSlider();
+			var parametros = buscaParametros();
+			ctx = document.getElementById('grafico').getContext('2d');
+			window.myLine = new Chart(ctx, {});
+			var xhr = new XMLHttpRequest();
+			xhr.open('GET', 'chicago-local.db', true);
+			xhr.responseType = 'arraybuffer';
+			xhr.onload = function() {
+				var data = new Uint8Array(this.response);
+				var db = new SQL.Database(data);
+				var dadosResource = db.exec("SELECT * FROM resource ORDER BY segmentid");
+				var dadosUuid = db.exec("SELECT uuid FROM uuid_segmentid ORDER BY segmentid");
+				resources = dadosResource[0].values.slice();
+				uuids = dadosUuid[0].values.slice();
+				if(typeof parametros['uuid'] !== "undefined"){
+					montaGrafico([parametros['uuid']]);
+				}
+				montaComboRuas(parametros);
+			};
+			xhr.send();
+			$("#datainicial").datepicker();
+			$("#datafinal").datepicker();
+			preencheData();
+		});
+	</script>
+</body>
+</html>
