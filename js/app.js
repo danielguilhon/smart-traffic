@@ -6,7 +6,9 @@ var ruas = [];
 var ctx;
 var tabela;
 var db = 'chicago-local.db'
+//var db = 'chicago-novo.db'
 var interscity = 'http://localhost:8000'
+//var interscity = 'http://cidadesinteligentes.lsdi.ufma.br'
 
 /**
  * Definicao dos principais eventos necessarios para controlar o fluxo da
@@ -250,7 +252,7 @@ function montaComboRuas(parametro=null){
 	}
 	if(typeof parametro['street'] !== "undefined"){
 		$("#streets").val(parametro['street']);
-		$("#streets").trigger("change", -1);
+		$("#streets").trigger("change", null);
 	}
 }
 
@@ -279,9 +281,7 @@ function montaComboSegmentos(uuid){
 			if(uuid!=null){
 				$("#segmentos").val(uuid);
 			}
-			if(uuid==-1){
-				$("#historico").trigger("click");
-			}
+			$("#historico").trigger("click");
 		};
 		xhr.send();
 		
