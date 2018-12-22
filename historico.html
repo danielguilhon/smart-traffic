@@ -72,10 +72,10 @@
 	<script src="js/popper.min.js"></script>
 	<script src="js/bootstrap.min.js"></script>
 	<script src="js/Chart.bundle.min.js"></script>
-	<script src="sql.js"></script>
-	<script src="app.js"></script>
-	<script src="moment-with-locales.js"></script>
-	<script src="jQAllRangeSliders-withRuler-min.js"></script>
+	<script src="js/sql.js"></script>
+	<script src="js/app.js"></script>
+	<script src="js/moment-with-locales.js"></script>
+	<script src="js/jQAllRangeSliders-withRuler-min.js"></script>
 	<script>
 		preparaAmbienteHistorico();
 		
@@ -85,7 +85,7 @@
 			ctx = document.getElementById('grafico').getContext('2d');
 			window.myLine = new Chart(ctx, {});
 			var xhr = new XMLHttpRequest();
-			xhr.open('GET', 'chicago-local.db', true);
+			xhr.open('GET', db, true);
 			xhr.responseType = 'arraybuffer';
 			xhr.onload = function() {
 				var data = new Uint8Array(this.response);
@@ -93,7 +93,10 @@
 				var dadosResource = db.exec("SELECT * FROM resource ORDER BY segmentid");
 				var dadosUuid = db.exec("SELECT uuid FROM uuid_segmentid ORDER BY segmentid");
 				resources = dadosResource[0].values.slice();
-				uuids = dadosUuid[0].values.slice();
+				uuids_res = dadosUuid[0].values.slice();
+				uuids = $.map(uuids_res ,function(uuid) {
+				    return uuid[0];
+				});
 				if(typeof parametros['uuid'] !== "undefined"){
 					montaGrafico([parametros['uuid']]);
 				}

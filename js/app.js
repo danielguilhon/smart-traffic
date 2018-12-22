@@ -5,9 +5,12 @@ var segmentos = [];
 var ruas = [];
 var ctx;
 var tabela;
+var db = 'chicago-local.db'
+var interscity = 'http://localhost:8000'
 
 /**
- * Definicao dos principais eventos necessarios para controlar o fluxo da aplicacao
+ * Definicao dos principais eventos necessarios para controlar o fluxo da
+ * aplicacao
  */
 function preparaAmbienteHistorico(){
 	moment.locale('pt-br');
@@ -24,16 +27,10 @@ function preparaAmbienteHistorico(){
 
 function preparaAmbienteSmart(){
 	moment.locale('pt-br');
-	$("#flow").on("interscity", function(event, uuid, data){
-		desenhaUuid( uuid, data);
-	});
 	$("#flow").on("tabela", function(event){
 		criaTabela();
 	});
-	$("#flow").on("montaeixos", function(event, dados, label){
-		MontaEixos(dados, label);
-	});
-	$("#atualiza").on("click", function(e, dados){
+	$("#atualiza").on("click", function(e){
 		data = moment( $("#data").val(),"DD/MM/YYYY HH:mm");
 		atualizaMapa(data);
 	});
@@ -45,9 +42,11 @@ function preparaAmbienteSmart(){
 }
 
 /**
- * Serializa os parametros passados via URL. Necessario para saber se o historico sera de
- * um UUID ou de uma rua (a rua tem precedencia sobre um UUID, caso sejam passados os 2
- * @returns {Object} variavel contendo todos os parametros passados na URL 
+ * Serializa os parametros passados via URL. Necessario para saber se o
+ * historico sera de um UUID ou de uma rua (a rua tem precedencia sobre um UUID,
+ * caso sejam passados os 2
+ * 
+ * @returns {Object} variavel contendo todos os parametros passados na URL
  */
 function buscaParametros(){
 	var parametros={};
@@ -67,8 +66,9 @@ function buscaParametros(){
 }
 
 /**
- * No carregamento inicial, preenche as datepickers com a data atual, e 1 dia pra trás
- * padrão a ser utilizado no desenho do grafico historico 
+ * No carregamento inicial, preenche as datepickers com a data atual, e 1 dia
+ * pra trás padrão a ser utilizado no desenho do grafico historico
+ * 
  * @param inicial
  * @param dtFinal
  * @returns
@@ -87,11 +87,9 @@ function preencheData(inicial = null, dtFinal = null){
 }
 
 /**
- * callback do click do botao historico
- * para atualizar o grafico do historico
- * pega as datas que estao no slider
- * verifica quais selecoes estao nos combos street e segmentos
- * e efetua a busca dos segmentos
+ * callback do click do botao historico para atualizar o grafico do historico
+ * pega as datas que estao no slider verifica quais selecoes estao nos combos
+ * street e segmentos e efetua a busca dos segmentos
  */
 function atualizaHistorico(){
 	var values;
@@ -157,7 +155,11 @@ function preencheLinhaTabela(id, street, segmento, speed, uuid){
 		'<a href="historico.html?uuid='+uuid+'">' + segmento + '</a>',
 		speed
 	]).draw();
-	//$( "#segmentos-body" ).append( '<tr><td><a href="historico.html?uuid='+uuid+'">' + id + '</a></td><td><a href="historico.html?street='+street+'">' + street + '</a></td><td><a href="historico.html?uuid='+uuid+'">' + segmento + '</a></td><td>' + speed + '</td></tr>' );
+	// $( "#segmentos-body" ).append( '<tr><td><a
+	// href="historico.html?uuid='+uuid+'">' + id + '</a></td><td><a
+	// href="historico.html?street='+street+'">' + street + '</a></td><td><a
+	// href="historico.html?uuid='+uuid+'">' + segmento + '</a></td><td>' +
+	// speed + '</td></tr>' );
 }
 
 
@@ -297,26 +299,44 @@ function carregaMapa(){
 		var dadosUuid = db.exec("SELECT uuid FROM uuid_segmentid ORDER BY segmentid");
 		
 		resources = dadosResource[0].values.slice();
-		uuids = dadosUuid[0].values.slice();
-				
-		$.each(uuids, function(index, item) {
-			desenhaUuid(index, item, null);
-		});		
+		uuids_arr = dadosUuid[0].values.slice();
+		uuids = $.map(uuids_arr ,function(uuid) {
+		    return uuid[0];
+		});
+		var i;
+		var total = uuids.length;
+		for (i = 0; i < total; i+=1000) {
+			var consulta = uuids.slice(i,i+1000);
+			desenhaUuid(1, consulta, null);
+		}	
 	};
 	xhr.send();
 }
 
+
+
+/**
+ * Esta funcao busca os dados de contexto de um ou mais uuids
+ * 
+ * @param index
+ * @param uuid
+ *            {array} array contendo uma lista de uuids a serem consultados
+ * @param dataInicial
+ *            {moment} data a ser usada para dados de contexto historico
+ * @returns
+ */
 function desenhaUuid(index, uuid, dataInicial=null){
 	var capability_json;
 	var data = new moment(dataInicial);
 	var url;
+	uuids_json = JSON.stringify(uuid);
 	if(dataInicial == null){
-		capability_json = '{"capabilities":["traffic_speed"]}';
-		url = "http://localhost:8000/collector/resources/"+uuid+"/data/last";
+		capability_json = '{"uuids":'+uuids_json+',"capabilities":["traffic_speed"]}';
+		url = interscity+'/collector/resources/data/last';
 	}else{
 		var dataFinal = data.add(1, 'hours');
-		capability_json = '{"capabilities":["traffic_speed"],"start_date":"'+dataInicial.format("YYYY-MM-DDTHH:mm:ss")+'","end_date":"'+dataFinal.format("YYYY-MM-DDTHH:mm:ss")+'"}';
-		url = "http://localhost:8000/collector/resources/"+uuid+"/data";
+		capability_json = '{"uuids":'+uuids_json+',"capabilities":["traffic_speed"],"start_date":"'+dataInicial.format("YYYY-MM-DDTHH:mm:ss")+'","end_date":"'+dataFinal.format("YYYY-MM-DDTHH:mm:ss")+'"}';
+		url = interscity+'/collector/resources/data';
 	}
 	$.ajax({
 		type: "POST",
@@ -326,13 +346,16 @@ function desenhaUuid(index, uuid, dataInicial=null){
 		url: url
 	}).then(function(data) {
 		if(data.resources.length>0){
-			v = data.resources[0].capabilities.traffic_speed[0].traffic_speed;
-			var street = resources[index][1];
-			var segmento = resources[index][2]+"-"+resources[index][3];
-			if(v > 0){
-				preencheLinhaTabela(resources[index][0], street, segmento, v, uuid);
-				desenhaSegmento(resources[index][6], resources[index][4], resources[index][7], resources[index][5], v);
-			}
+			$.each(data.resources, function (index, item){
+				v = item.capabilities.traffic_speed[0].traffic_speed;
+				recurso = uuids.findIndex(checkUuid, item.uuid);
+				var street = resources[recurso][1];
+				var segmento = resources[recurso][2]+"-"+resources[recurso][3];
+				if(v > 0){
+					preencheLinhaTabela(resources[recurso][0], street, segmento, v, item.uuid);
+					desenhaSegmento(resources[recurso][6], resources[recurso][4], resources[recurso][7], resources[recurso][5], v);
+				}
+			});
 		}
 	});
 }
@@ -340,12 +363,13 @@ function desenhaUuid(index, uuid, dataInicial=null){
 
 function atualizaMapa(data = null){
 	
-	//$( "#segmentos-body" ).empty();
 	tabela.clear();
-	$.each(uuids, function(index, item) {
-		desenhaUuid(index, item, data);
-	});
-	//tabela.draw();
+	var i;
+	var total = uuids.length;
+	for (i = 0; i < total; i+=1000) {
+		var consulta = uuids.slice(i,i+1000);
+		desenhaUuid(1, consulta, data);
+	}
 }
 
 
@@ -355,9 +379,10 @@ function criaTabela(){
 	});
 }
 
-//recebe um array com uuids para pesquisa
-//dispara o evento montaeixo, passando como parametros os valores medios de velocidade
-//e um label para o grafico 
+// recebe um array com uuids para pesquisa
+// dispara o evento montaeixo, passando como parametros os valores medios de
+// velocidade
+// e um label para o grafico
 
 function montaGrafico(uuid){
 	var dados=[];
@@ -371,14 +396,13 @@ function montaGrafico(uuid){
 	capability_json = '{"uuids":'+uuid_string+' ,"capabilities":["traffic_speed"],"start_date":"'+dataInicial.format("YYYY-MM-DDTHH:mm:ss")+'","end_date":"'+dataFinal.format("YYYY-MM-DDT23:59:ss")+'"}';
 	if(num_segmentos>1){
 		label = resources[recurso][1];
-		//var sql ='"SELECT resource.* FROM uuid_segmentid, resource WHERE uuid_segmentid.uuid ="'+uuid[0]+'" AND resource.segmentid = uuid_segmentid.segmentid"';
 	}
 	$.ajax({
 		type: "POST",
 		dataType: "json",
 		contentType: 'application/json',
 		data: capability_json,
-		url: "http://localhost:8000/collector/resources/data"
+		url: interscity +'/collector/resources/data'
 	}).then(function(data) {
 		var valores={};
 		$.each(data.resources, function (index, item){
@@ -428,9 +452,11 @@ function criaDateRangeSlider(){
 	
 	// Preferred method
 	$("#dateslider").on("valuesChanging", function(e, data){
-		//moment($("#datainicial").val(moment(data.values.min).format("DD/MM/YYYY HH:mm")));
+		// moment($("#datainicial").val(moment(data.values.min).format("DD/MM/YYYY
+		// HH:mm")));
 		moment($("#datainicial").val(moment(data.values.min).format("DD/MM/YYYY")));
-		//moment($("#datafinal").val(moment(data.values.max).format("DD/MM/YYYY HH:mm")));
+		// moment($("#datafinal").val(moment(data.values.max).format("DD/MM/YYYY
+		// HH:mm")));
 		moment($("#datafinal").val(moment(data.values.max).format("DD/MM/YYYY")));
 	});
 }
@@ -478,10 +504,10 @@ function smartTrafficDateSlider(){
 	});
 }
 
-//recebe um object que nas keys contem as dadtas e values as velocidades
-//deve retornar um novo object com as keys contendo as 24h dos dias
-//caso nao possua um valor para a hora específica, jogar 0;
-//substituir -1 por 0
+// recebe um object que nas keys contem as dadtas e values as velocidades
+// deve retornar um novo object com as keys contendo as 24h dos dias
+// caso nao possua um valor para a hora específica, jogar 0;
+// substituir -1 por 0
 function preencheEspaco24h(dados){
 
 	var dados24 = Object.assign(dados);
@@ -491,9 +517,16 @@ function preencheEspaco24h(dados){
 }
 
 
-//funcao para comparacao com findIndex para achar o indice no vetor recurso
-function checkUuid(uuid){
-	if(uuid[0] == this) return true;
+// 
+
+/**
+ * funcao para comparacao com findIndex para achar o indice no vetor recurso
+ * @param element {string} elemento do array original sendo comparado
+ * @this neste contexto signica o parametro passado, utilizado para comparar com o element
+ * @returns
+ */
+function checkUuid(element, index, array){
+	if(element == this) return true;
 	return false;
 }
 
