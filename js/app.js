@@ -265,7 +265,7 @@ function montaComboSegmentos(uuid){
 		$( "#segmentos" ).html('');
 		var rua = $( this ).text();
 		var xhr = new XMLHttpRequest();
-		xhr.open('GET', 'chicago-local.db', true);
+		xhr.open('GET', db, true);
 		xhr.responseType = 'arraybuffer';
 		xhr.onload = function() {
 			var data = new Uint8Array(this.response);
@@ -290,7 +290,7 @@ function montaComboSegmentos(uuid){
 
 function carregaMapa(){
 	var xhr = new XMLHttpRequest();
-	xhr.open('GET', 'chicago-local.db', true);
+	xhr.open('GET', db, true);
 	xhr.responseType = 'arraybuffer';
 	xhr.onload = function() {
 		var data = new Uint8Array(this.response);
